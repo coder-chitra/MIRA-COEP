@@ -1,0 +1,79 @@
+# Flow specification version
+version: "0.1.0"                                    # Flow specification version
+
+metadata:
+  flow_type: "compound"                             # Specifies this as a compound flow
+  name: "ai-blog-post-generator"                    # Unique identifier
+  description: "Generates AI-based blog posts on given topics and refines content"
+  author: "chitra_shinde"                           # Your Mira Flows username
+  tags: [blogging, AI, content-generation]          # Discovery keywords
+  private: true                                     # Access control setting
+
+inputs:
+  prime_input_1:                                    # Primary input parameter
+    type: string
+    description: "Topic for the blog post"
+    required: true
+    example: "The Impact of Artificial Intelligence in Healthcare"
+  prime_input_2:                                    # Secondary input parameter
+    type: string
+    description: "Target audience for the blog post"
+    required: false
+    example: "Healthcare professionals and tech enthusiasts"
+
+workflow:
+  # Elemental Flow stage - starts immediately
+  first_flow:                                       # First processing stage
+    type: "elemental"
+    flow_name: "chitra_shinde/blog_topic_formatter"
+    inputs:
+      abc: ${inputs.prime_input_1}
+      xyz: ${inputs.prime_input_2}
+
+  # Custom processing stage - starts immediately (parallel to first_flow)
+  second_flow:                                      # Parallel processing stage
+    type: "custom"
+    inputs:
+      input1: ${inputs.prime_input_1}
+    model:
+      provider: "openai"                            # e.g., anthropic, openai, meta, etc.
+      name: "gpt-4"                                 # Specific model identifier
+    prompt: |
+      Write an engaging introduction for a blog post on the topic "{input1}".
+      Ensure it resonates with both technical and non-technical readers.
+
+  # Waits for both first_flow and second_flow to complete
+  third_flow:                                       
+    type: "custom"
+    depends_on: [first_flow, second_flow]           # Dependent on first_flow and second_flow
+    inputs:
+      input1: ${first_flow.output}                  # uses output of first_flow as input
+      input2: ${second_flow.output}                 # uses output of second_flow as input
+    model:
+      provider: "openai"
+      name: "gpt-4"
+    dataset:
+      source: "chitra_shinde/blog_templates_dataset"
+    prompt: |
+      Using the refined topic from {input1} and the introduction from {input2},
+      generate a comprehensive blog post with sections on Introduction, Current Trends,
+      Benefits, Challenges, and Conclusion.
+
+output:
+  value:                                            # Combine & customize outputs in order
+    - ${first_flow.output}
+    - ${second_flow.output}
+    - ${third_flow.output}
+
+readme: |
+  This flow automates the generation of AI-based blog posts using multiple stages of refinement.
+
+  ### Workflow Overview:
+  1. **First Flow**: Formats and refines the blog topic using `chitra_shinde/blog_topic_formatter`.
+  2. **Second Flow**: Generates an engaging introduction for the blog post using OpenAI's GPT-4.
+  3. **Third Flow**: Combines outputs from the first and second flows to create a detailed blog post.
+
+  ### Outputs:
+  - The formatted topic from the first flow.
+  - An engaging introduction from the second flow.
+  - A complete blog post generated in the third flow.
